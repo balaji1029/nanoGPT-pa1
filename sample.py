@@ -84,6 +84,10 @@ x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
 with torch.no_grad():
     with ctx:
         for k in range(num_samples):
-            y = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
+            mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
+            y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
+            mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
             print(decode(y[0].tolist()))
             print('---------------')
+            print(f"Generation times (in seconds): {time_list}")
+            print(f"Memory usage (in bytes): {mem_after - mem_before}")
