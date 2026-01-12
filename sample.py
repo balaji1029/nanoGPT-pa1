@@ -109,5 +109,6 @@ plt.ylabel('Time taken (seconds)')
 plt.ylim(0, y_max)
 # draw a line at x = 64
 plt.axvline(x=64, color='red', linestyle='--')
+plt.axvline(x=16, color='red', linestyle='--')
 plt.savefig('time_vs_tokens.png')
 plt.show()
