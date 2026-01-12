@@ -91,8 +91,8 @@ with torch.no_grad():
             # print(decode(y[0].tolist()))
             # print('---------------')
             num_tokens = list(range(len(x[0]), len(y[0] - len(x[0]))))
-            tokens_len += num_tokens
-            time_taken += time_list
+            tokens_len += num_tokens[1:]
+            time_taken += time_list[1:]
             print(len(y[0]), 'tokens generated while max_new_tokens is', max_new_tokens)
             print(f"Generated token IDs: {num_tokens}")
             print(f"Generation times (in seconds): {time_list}")
