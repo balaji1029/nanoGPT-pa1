@@ -107,5 +107,7 @@ plt.title('Time taken vs Number of tokens given as input')
 plt.xlabel('Number of tokens given as input')
 plt.ylabel('Time taken (seconds)')
 plt.ylim(0, y_max)
+# draw a line at x = 64
+plt.axvline(x=64, color='red', linestyle='--')
 plt.savefig('time_vs_tokens.png')
 plt.show()
