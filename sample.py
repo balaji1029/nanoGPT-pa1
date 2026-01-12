@@ -85,9 +85,9 @@ time_taken = []
 different_input_tokens = [
     "Hello, how are you?",
     "What is the capital of France?",
-    "Once upon a time in a land far away..."
-    "In a shocking discovery, scientists have found that"
-    "The quick brown fox jumps over the lazy dog."
+    "Once upon a time in a land far away...",
+    "In a shocking discovery, scientists have found that",
+    "The quick brown fox jumps over the lazy dog.",
 ]
 with torch.no_grad():
     with ctx:
