@@ -90,7 +90,7 @@ with torch.no_grad():
             mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
             # print(decode(y[0].tolist()))
             # print('---------------')
-            num_tokens = list(range(len(x[0]), len(y[0])))
+            num_tokens = list(range(len(x[0]), len(y[0] - len(x[0]))))
             tokens_len += num_tokens
             time_taken += time_list
             print(len(y[0]), 'tokens generated while max_new_tokens is', max_new_tokens)
@@ -104,4 +104,5 @@ plt.scatter(tokens_len, time_taken, alpha=0.5)
 plt.title('Time taken vs Number of tokens given as input')
 plt.xlabel('Number of tokens given as input')
 plt.ylabel('Time taken (seconds)')
+plt.savefig('time_vs_tokens.png')
 plt.show()
