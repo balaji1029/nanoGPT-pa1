@@ -98,8 +98,8 @@ with torch.no_grad():
                 mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
                 mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
-                # print(decode(y[0].tolist()))
-                # print('---------------')
+                print(decode(y[0].tolist()))
+                print('---------------')
                 num_tokens = list(range(len(x[0]), len(y[0])))
                 tokens_len += num_tokens[1:]
                 time_taken += time_list[1:]
