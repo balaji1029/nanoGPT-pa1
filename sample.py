@@ -100,9 +100,12 @@ with torch.no_grad():
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 5))
+# truncate it to y_max for better visualization
+y_max = 0.020
 plt.scatter(tokens_len, time_taken, alpha=0.5)
 plt.title('Time taken vs Number of tokens given as input')
 plt.xlabel('Number of tokens given as input')
 plt.ylabel('Time taken (seconds)')
+plt.ylim(0, y_max)
 plt.savefig('time_vs_tokens.png')
 plt.show()
