@@ -209,8 +209,8 @@ class GPT(nn.Module):
         # pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
         if cache_kv:
-            pos = torch.arange(self.current_pos, self.current_pos + t, dtype=torch.long, device=device) # shape (t)
-            self.current_pos += t
+            pos = torch.arange(self.current_pos, t, dtype=torch.long, device=device) # shape (t)
+            self.current_pos = t
             print('Current position updated to: ', self.current_pos)
         else:
             pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
