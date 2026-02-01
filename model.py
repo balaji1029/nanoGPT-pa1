@@ -71,7 +71,7 @@ class CausalSelfAttention(nn.Module):
                 self.v_cache = torch.cat((self.v_cache, v_new), dim=1)
             k = self.k_cache
             v = self.v_cache
-            T = k_new.size(1)
+            T = k.size(1)
         else:
             k = k_new
             v = v_new
