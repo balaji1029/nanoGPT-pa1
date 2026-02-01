@@ -134,7 +134,7 @@ class Block(nn.Module):
         self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
         self.mlp = MLP(config)
 
-    def forward(self, x, cache_kv=False, index=0):
+    def forward(self, x, cache_kv=False):
         x = x + self.attn(self.ln_1(x), cache_kv=cache_kv)
         x = x + self.mlp(self.ln_2(x))
         return x
@@ -211,6 +211,7 @@ class GPT(nn.Module):
         if cache_kv:
             pos = torch.arange(self.current_pos, self.current_pos + t, dtype=torch.long, device=device) # shape (t)
             self.current_pos += t
+            print('Current position updated to: ', self.current_pos)
         else:
             pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
@@ -353,7 +354,6 @@ class GPT(nn.Module):
         time_list = []
         if cache:
             self.clear_kv_caches()
-        index = 0
         for _ in range(max_new_tokens):
             print('Input length right now: ', idx.size(1))
             start_time = time.time()
@@ -375,7 +375,6 @@ class GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
             end_time = time.time()
             time_list.append(end_time - start_time)
-            index += 1
         return idx, time_list
     
     def clear_kv_caches(self):
