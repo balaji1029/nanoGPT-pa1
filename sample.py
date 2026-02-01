@@ -20,6 +20,7 @@ seed = 1337
 device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1', etc.
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32' or 'bfloat16' or 'float16'
 compile = False # use PyTorch 2.0 to compile the model to be faster
+cache = False
 exec(open('configurator.py').read()) # overrides from command line or config file
 # -----------------------------------------------------------------------------
 
@@ -95,9 +96,11 @@ with torch.no_grad():
             start_ids = encode(prompt)
             x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
             for k in range(num_samples):
-                mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
-                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
-                mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
+                if cache:
+                    model.clear_kv_caches()
+                # mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
+                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cache=cache)
+                # mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 print(decode(y[0].tolist()))
                 print('---------------')
                 num_tokens = list(range(len(x[0]), len(y[0])))

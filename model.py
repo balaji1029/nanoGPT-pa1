@@ -31,6 +31,10 @@ class CausalSelfAttention(nn.Module):
 
     def __init__(self, config):
         super().__init__()
+
+        self.k_cache = None
+        self.v_cache = None
+
         assert config.n_embd % config.n_head == 0
         # key, query, value projections for all heads, but in a batch
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
@@ -50,11 +54,24 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
 
-    def forward(self, x):
+    def forward(self, x, cache_kv=False):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
+        k_new, q_new, v_new  = self.c_attn(x).split(self.n_embd, dim=2)
+
+        if cache_kv:
+            if self.k_cache is None:
+                self.k_cache = k_new
+                self.v_cache = v_new
+            else:
+                self.k_cache = torch.cat((self.k_cache, k_new), dim=1)
+                self.v_cache = torch.cat((self.v_cache, v_new), dim=1)
+            k_new = self.k_cache
+            v_new = self.v_cache
+            T = k_new.size(1)
+
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
+        # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
         print(f'Size of x: {x.size()}')
         print(f"q shape: {q.shape}, k shape: {k.shape}, v shape: {v.shape}")
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
@@ -77,6 +94,10 @@ class CausalSelfAttention(nn.Module):
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+    
+    def clear_kv_cache(self):
+        self.k_cache = None
+        self.v_cache = None
 
 class MLP(nn.Module):
 
@@ -103,8 +124,8 @@ class Block(nn.Module):
         self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
         self.mlp = MLP(config)
 
-    def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
+    def forward(self, x, cache_kv=False):
+        x = x + self.attn(self.ln_1(x), cache_kv=cache_kv)
         x = x + self.mlp(self.ln_2(x))
         return x
 
@@ -170,18 +191,24 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None, chached_kv=False):
+    def forward(self, idx, targets=None, cache_kv=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
+
+        if cache_kv:
+            # during generation, we only pass in the last
+            pos = pos[-1:].unsqueeze(0)  # shape (1, 1)
+        else:
+            pos = pos.unsqueeze(0).expand_as(idx) # shape (b, t)
 
         # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
-            x = block(x)
+            x = block(x, cache_kv=cache_kv)
         x = self.transformer.ln_f(x)
 
         if targets is not None:
@@ -335,3 +362,7 @@ class GPT(nn.Module):
             end_time = time.time()
             time_list.append(end_time - start_time)
         return idx, time_list
+    
+    def clear_kv_caches(self):
+        for block in self.transformer.h:
+            block.attn.clear_kv_cache()
