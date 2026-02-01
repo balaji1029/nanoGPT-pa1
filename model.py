@@ -68,7 +68,7 @@ class CausalSelfAttention(nn.Module):
                 self.v_cache = torch.cat((self.v_cache, v_new), dim=1)
             k = self.k_cache
             v = self.v_cache
-            # T = k.size(1)
+            Tk = k.size(1)
         else:
             k = k_new
             v = v_new
@@ -85,8 +85,8 @@ class CausalSelfAttention(nn.Module):
         # print(f'Size of x: {x.size()}')
         # print(f"q shape: {q.shape}, k shape: {k.shape}, v shape: {v.shape}")
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q = q.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash:
