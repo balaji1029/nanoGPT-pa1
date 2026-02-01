@@ -355,13 +355,14 @@ class GPT(nn.Module):
         time_list = []
         if cache:
             self.clear_kv_caches()
+        index = 0
         for _ in range(max_new_tokens):
             print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
             # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond, cache_kv=cache)
+            logits, _ = self(idx_cond, cache_kv=cache, index=index)
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options
@@ -376,6 +377,7 @@ class GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
             end_time = time.time()
             time_list.append(end_time - start_time)
+            index += 1
         return idx, time_list
     
     def clear_kv_caches(self):
