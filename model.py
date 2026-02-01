@@ -54,10 +54,7 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
 
-    def forward(self, x, cache_kv=False, index=0):
-        if cache_kv and index > 0:
-            # during generation, we only pass in the last token
-            x = x[:, -1:, :]
+    def forward(self, x, cache_kv=False):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         k_new, q_new, v_new  = self.c_attn(x).split(self.n_embd, dim=2)
@@ -71,7 +68,7 @@ class CausalSelfAttention(nn.Module):
                 self.v_cache = torch.cat((self.v_cache, v_new), dim=1)
             k = self.k_cache
             v = self.v_cache
-            T = k.size(1)
+            # T = k.size(1)
         else:
             k = k_new
             v = v_new
@@ -138,7 +135,7 @@ class Block(nn.Module):
         self.mlp = MLP(config)
 
     def forward(self, x, cache_kv=False, index=0):
-        x = x + self.attn(self.ln_1(x), cache_kv=cache_kv, index=index)
+        x = x + self.attn(self.ln_1(x), cache_kv=cache_kv)
         x = x + self.mlp(self.ln_2(x))
         return x
 
@@ -159,6 +156,7 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.config = config
+        self.current_pos = 0
 
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(config.vocab_size, config.n_embd),
@@ -204,24 +202,24 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None, cache_kv=False, index=0):
+    def forward(self, idx, targets=None, cache_kv=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
+        # pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
         if cache_kv:
-            # during generation, we only pass in the last
-            pos = pos[-1:].unsqueeze(0)  # shape (1, 1)
+            pos = torch.arange(self.current_pos, self.current_pos + t, dtype=torch.long, device=device) # shape (t)
+            self.current_pos += t
         else:
-            pos = pos.unsqueeze(0).expand_as(idx) # shape (b, t)
+            pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
         # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
-            x = block(x, cache_kv=cache_kv, index=index)
+            x = block(x, cache_kv=cache_kv)
         x = self.transformer.ln_f(x)
 
         if targets is not None:
@@ -383,3 +381,4 @@ class GPT(nn.Module):
     def clear_kv_caches(self):
         for block in self.transformer.h:
             block.attn.clear_kv_cache()
+        self.current_pos = 0
