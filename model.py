@@ -64,15 +64,18 @@ class CausalSelfAttention(nn.Module):
                 self.k_cache = k = k_new
                 self.v_cache = v = v_new
             else:
-                self.k_cache = k = torch.cat((self.k_cache, k_new), dim=1)
-                self.v_cache = v = torch.cat((self.v_cache, v_new), dim=1)
-            k_new = self.k_cache
-            v_new = self.v_cache
+                self.k_cache = torch.cat((self.k_cache, k_new), dim=1)
+                self.v_cache = torch.cat((self.v_cache, v_new), dim=1)
+            k = self.k_cache
+            v = self.v_cache
             T = k_new.size(1)
         else:
             k = k_new
             v = v_new
         q = q_new
+
+        print(q.size())
+        print(B, T, self.n_head, C // self.n_head)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
