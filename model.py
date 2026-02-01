@@ -77,6 +77,9 @@ class CausalSelfAttention(nn.Module):
         print(q.size())
         print(B, T, self.n_head, C // self.n_head)
 
+        print(k.size())
+        print(v.size())
+
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
         # print(f'Size of x: {x.size()}')
