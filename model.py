@@ -363,7 +363,7 @@ class GPT(nn.Module):
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
-            idx_cond = idx[-sent_input_length:, -self.config.block_size:] if cache else idx_cond
+            idx_cond = idx[sent_input_length:, -self.config.block_size:] if cache else idx_cond
             sent_input_length += idx_cond.size(1)
             print(f"idx_cond shape: {idx_cond.shape}, sent_input_length: {sent_input_length}")
             # forward the model to get the logits for the index in the sequence
