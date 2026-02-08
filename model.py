@@ -365,9 +365,10 @@ class GPT(nn.Module):
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
             if cache:
                 print('cache is on')
-            idx_cond = idx[sent_input_length:, :] if cache else idx_cond
+            idx_cond = idx_cond[sent_input_length:, :] if cache else idx_cond
             sent_input_length += idx_cond.size(1)
             print(f"idx_cond shape: {idx_cond.shape}, sent_input_length: {sent_input_length}")
+            print(f"{idx_cond[sent_input_length:, :].shape}")
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond, cache_kv=cache)
             # pluck the logits at the final step and scale by desired temperature
