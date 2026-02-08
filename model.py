@@ -352,7 +352,7 @@ class GPT(nn.Module):
             idx_cond = idx[:, tokens_sent:] if cached_kv else idx_cond
             tokens_sent += idx_cond.size(1)
             # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond)
+            logits, _ = self(idx_cond, cached_kv=cached_kv)
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options
