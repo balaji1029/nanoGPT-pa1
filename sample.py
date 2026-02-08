@@ -85,6 +85,7 @@ time_taken_cached = []
 time_taken = []
 # run generation
 different_input_tokens = [
+    "How to propose to a girl you like"
     "Hello, how are you?",
     "What is the capital of France?",
     "Once upon a time in a land far away...",

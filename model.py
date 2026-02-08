@@ -123,8 +123,8 @@ class Block(nn.Module):
         self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
         self.mlp = MLP(config)
 
-    def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
+    def forward(self, x, cached_kv=False):
+        x = x + self.attn(self.ln_1(x), cached_kv=cached_kv)
         x = x + self.mlp(self.ln_2(x))
         return x
 
@@ -207,7 +207,7 @@ class GPT(nn.Module):
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
-            x = block(x)
+            x = block(x, cached_kv=cached_kv)
         x = self.transformer.ln_f(x)
 
         if targets is not None:
