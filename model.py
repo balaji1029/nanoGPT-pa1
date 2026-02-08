@@ -210,8 +210,8 @@ class GPT(nn.Module):
         # pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
         if cache_kv:
-            pos = torch.arange(self.current_pos, t, dtype=torch.long, device=device) # shape (t)
-            self.current_pos = t
+            pos = torch.arange(self.current_pos, self.current_pos + t, dtype=torch.long, device=device) # shape (t)
+            self.current_pos += t
             print('Current position updated to: ', self.current_pos)
         else:
             pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
@@ -356,12 +356,14 @@ class GPT(nn.Module):
         if cache:
             self.clear_kv_caches()
         self.current_pos = 0
+        sent_input_length = 0
         for _ in range(max_new_tokens):
             print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
-            idx_cond = idx[-self.current_pos:, -self.config.block_size:] if cache else idx_cond
+            idx_cond = idx[-sent_input_length:, -self.config.block_size:] if cache else idx_cond
+            sent_input_length += idx_cond.size(1)
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond, cache_kv=cache)
             # pluck the logits at the final step and scale by desired temperature
@@ -376,7 +378,6 @@ class GPT(nn.Module):
             idx_next = torch.multinomial(probs, num_samples=1)
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
-            self.current_pos += idx.size(1)
             end_time = time.time()
             time_list.append(end_time - start_time)
         return idx, time_list
