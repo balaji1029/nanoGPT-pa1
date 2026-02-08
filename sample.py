@@ -98,11 +98,13 @@ with torch.no_grad():
         for prompt in different_input_tokens:
             start_ids = encode(prompt)
             x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
+            x[1] = x[0] # make a copy of the input tokens to ensure the same input is given for both cached and non-cached generation
             for k in range(num_samples):
                 mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=True, greedy=greedy)
                 mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 print(decode(y[0].tolist()))
+                print(decode(y[1].tolist()))
                 print('---------------')
                 num_tokens = list(range(len(x[0]), len(y[0])))
                 tokens_len += num_tokens[1:]
@@ -110,6 +112,7 @@ with torch.no_grad():
                 y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=False, greedy=greedy)
                 time_taken += time_list[1:]
                 print(decode(y[0].tolist()))
+                print(decode(y[1].tolist()))
                 print('===============')
                 # print(len(y[0]), 'tokens generated while max_new_tokens is', max_new_tokens)
                 # print(f"Generated token IDs: {num_tokens}")
