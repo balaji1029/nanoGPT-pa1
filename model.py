@@ -336,7 +336,7 @@ class GPT(nn.Module):
         time_list = []
         tokens_sent = 0
         for _ in range(max_new_tokens):
-            print('Input length right now: ', idx.size(1))
+            # print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
