@@ -85,9 +85,9 @@ class CausalSelfAttention(nn.Module):
             att = att.masked_fill(mask == 0, float('-inf'))
         else:
             att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-        att = self.attn_dropout(att)
-        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+            att = F.softmax(att, dim=-1)
+            att = self.attn_dropout(att)
+            y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
         # output projection
@@ -124,6 +124,8 @@ class Block(nn.Module):
         self.mlp = MLP(config)
 
     def forward(self, x, cached_kv=False):
+        if cached_kv:
+            print('Using cached_kv in Block forward')
         x = x + self.attn(self.ln_1(x), cached_kv=cached_kv)
         x = x + self.mlp(self.ln_2(x))
         return x
