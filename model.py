@@ -63,7 +63,7 @@ class CausalSelfAttention(nn.Module):
         if cached_kv:
             k = torch.cat((self.cached_k, k), dim=1) if self.cached_k is not None else k
             v = torch.cat((self.cached_v, v), dim=1) if self.cached_v is not None else v
-            self.cached_k, self.cached_v = k, v
+            self.cached_k, self.cached_v = k.detach().to(x.device), v.detach().to(x.device) # detach from the computation graph to avoid backprop through the cache
 
         Tk = k.size(1)
 
