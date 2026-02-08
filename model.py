@@ -81,9 +81,10 @@ class CausalSelfAttention(nn.Module):
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             # if not cached_kv:
             if cached_kv:
-                if T == 1:
+                if T == Tk and T > 1:
                     # if we are only processing one new token, we only need to apply the causal mask to the last query position
-                    att = att.masked_fill(self.bias[:,:,:T,:Tk] == 0, float('-inf'))
+                    self.bias = torch.tril(torch.ones(Tk, Tk)).view(1, 1, Tk, Tk).to(att.device)
+                    att = att.masked_fill(self.bias[:,:,:Tk,:Tk] == 0, float('-inf'))
             else:
                 att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
