@@ -98,7 +98,8 @@ with torch.no_grad():
         for prompt in different_input_tokens:
             start_ids = encode(prompt)
             x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
-            x[1] = x[0] # make a copy of the input tokens to ensure the same input is given for both cached and non-cached generation
+            # append a tensor x of shape (1, T) to the model and get the output
+            x = torch.cat((x, x), dim=0) # just to warm up the model and ensure any lazy initialization is done before we start timing
             for k in range(num_samples):
                 mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=True, greedy=greedy)
