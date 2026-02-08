@@ -82,7 +82,7 @@ class CausalSelfAttention(nn.Module):
             # if not cached_kv:
             if cached_kv:
                 bias = torch.tril(torch.ones(1, 1, Tk, Tk)).to(att.device)
-                att = att.masked_fill(bias[:, :, -T:, -Tk] == 0, float('-inf'))
+                att = att.masked_fill(bias[:, :, -T:, -Tk:] == 0, float('-inf'))
             else:
                 att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
