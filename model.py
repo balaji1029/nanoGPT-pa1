@@ -42,6 +42,10 @@ class CausalSelfAttention(nn.Module):
         self.n_head = config.n_head
         self.n_embd = config.n_embd
         self.dropout = config.dropout
+
+        self.cached_k = None
+        self.cached_v = None
+
         # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
         self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
         if not self.flash:
@@ -50,16 +54,22 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
 
-    def forward(self, x):
+    def forward(self, x, cached_kv=False):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
-        print(f'Size of x: {x.size()}')
-        print(f"q shape: {q.shape}, k shape: {k.shape}, v shape: {v.shape}")
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+
+        if cached_kv:
+            k = torch.cat((self.cached_k, k), dim=1) if self.cached_k is not None else k
+            v = torch.cat((self.cached_v, v), dim=1) if self.cached_v is not None else v
+            self.cached_k, self.cached_v = k, v
+
+        Tk = k.size(1)
+
+        k = k.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash:
@@ -77,6 +87,10 @@ class CausalSelfAttention(nn.Module):
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+    
+    def clear_cache(self):
+        self.cached_k = None
+        self.cached_v = None
 
 class MLP(nn.Module):
 
@@ -125,6 +139,7 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.config = config
+        self.current_pos = 0
 
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(config.vocab_size, config.n_embd),
@@ -170,11 +185,16 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None, chached_kv=False):
+    def forward(self, idx, targets=None, cached_kv=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
+
+        if cached_kv:
+            pos = torch.arange(self.current_pos, self.current_pos + t, dtype=torch.long, device=device) # shape (t)
+            self.current_pos += t
+        else:
+            pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
         # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
@@ -306,18 +326,20 @@ class GPT(nn.Module):
         return mfu
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, cached_kv=False):
         """
         Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
         time_list = []
+        tokens_sent = 0
         for _ in range(max_new_tokens):
             print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
+            idx_cond = idx[:, tokens_sent:] if cached_kv else idx_cond
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond)
             # pluck the logits at the final step and scale by desired temperature
@@ -335,3 +357,9 @@ class GPT(nn.Module):
             end_time = time.time()
             time_list.append(end_time - start_time)
         return idx, time_list
+    
+    @torch.no_grad()
+    def clear_cache(self):
+        for block in self.transformer.h:
+            block.attn.clear_cache()
+        self.current_pos = 0
