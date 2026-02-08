@@ -206,6 +206,7 @@ class GPT(nn.Module):
     def forward(self, idx, targets=None, cache_kv=False):
         device = idx.device
         b, t = idx.size()
+        print(f"Forward called with idx of shape {idx.shape}")
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         # pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
