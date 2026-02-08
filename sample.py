@@ -18,6 +18,7 @@ temperature = 0.8 # 1.0 = no change, < 1.0 = less random, > 1.0 = more random, i
 top_k = 200 # retain only the top_k most likely tokens, clamp others to have 0 probability
 seed = 1337
 cache = False
+greedy = False # if True, always take the most likely token, otherwise sample from the distribution
 device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1', etc.
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32' or 'bfloat16' or 'float16'
 compile = False # use PyTorch 2.0 to compile the model to be faster
@@ -99,14 +100,14 @@ with torch.no_grad():
             x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
             for k in range(num_samples):
                 mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
-                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=True)
+                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=True, greedy=greedy)
                 mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 print(decode(y[0].tolist()))
                 print('---------------')
                 num_tokens = list(range(len(x[0]), len(y[0])))
                 tokens_len += num_tokens[1:]
                 time_taken_cached += time_list[1:]
-                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=False)
+                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=False, greedy=greedy)
                 time_taken += time_list[1:]
                 print(decode(y[0].tolist()))
                 print('===============')
