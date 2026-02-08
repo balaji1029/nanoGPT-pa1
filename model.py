@@ -80,7 +80,11 @@ class CausalSelfAttention(nn.Module):
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             # if not cached_kv:
-            att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            if cached_kv:
+                mask = torch.tril(torch.ones(T, Tk, device=q.device))
+                att = att.masked_fill(mask == 0, float('-inf'))
+            else:
+                att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
