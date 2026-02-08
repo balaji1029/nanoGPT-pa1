@@ -89,7 +89,7 @@ class CausalSelfAttention(nn.Module):
         v = v.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        if self.flash and not cache_kv:
+        if self.flash and not cache_kv: 
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
         else:
@@ -355,14 +355,15 @@ class GPT(nn.Module):
         time_list = []
         if cache:
             self.clear_kv_caches()
-                
+        self.current_pos = 0
         for _ in range(max_new_tokens):
             print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
+            idx_cond = idx[-1:, -self.config.block_size:] if cache else idx_cond
             # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond, cache_kv=cache)
+            logits, _ = self(idx_cond, cache_kv=cache, current_pos=self.current_pos)
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options
@@ -375,6 +376,7 @@ class GPT(nn.Module):
             idx_next = torch.multinomial(probs, num_samples=1)
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
+            self.current_pos += 1
             end_time = time.time()
             time_list.append(end_time - start_time)
         return idx, time_list
