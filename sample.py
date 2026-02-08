@@ -81,6 +81,7 @@ if start.startswith('FILE:'):
 start_ids = encode(start)
 x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
 tokens_len = []
+time_taken_cached = []
 time_taken = []
 # run generation
 different_input_tokens = [
@@ -97,13 +98,17 @@ with torch.no_grad():
             x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
             for k in range(num_samples):
                 mem_before = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
-                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=cache)
+                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=True)
                 mem_after = torch.cuda.memory_allocated() if device_type == 'cuda' else 0
                 print(decode(y[0].tolist()))
                 print('---------------')
                 num_tokens = list(range(len(x[0]), len(y[0])))
                 tokens_len += num_tokens[1:]
+                time_taken_cached += time_list[1:]
+                y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=False)
                 time_taken += time_list[1:]
+                print(decode(y[0].tolist()))
+                print('===============')
                 # print(len(y[0]), 'tokens generated while max_new_tokens is', max_new_tokens)
                 # print(f"Generated token IDs: {num_tokens}")
                 # print(f"Generation times (in seconds): {time_list}")
@@ -113,7 +118,9 @@ import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 5))
 # truncate it to y_max for better visualization
 # y_max = 0.020
-plt.scatter(tokens_len, time_taken, alpha=0.5)
+plt.scatter(tokens_len, time_taken, alpha=0.5, color='blue', label='Without Caching')
+plt.scatter(tokens_len, time_taken_cached, alpha=0.5, color='orange', label='With Caching')
+plt.legend()
 plt.title('Time taken vs Number of tokens given as input')
 plt.xlabel('Number of tokens given as input')
 plt.ylabel('Time taken (seconds)')

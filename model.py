@@ -334,6 +334,8 @@ class GPT(nn.Module):
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
         time_list = []
+        self.clear_cache()
+        self.current_pos = 0
         tokens_sent = 0
         for _ in range(max_new_tokens):
             # print('Input length right now: ', idx.size(1))
