@@ -81,8 +81,9 @@ class CausalSelfAttention(nn.Module):
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             # if not cached_kv:
             if cached_kv:
-                mask = torch.tril(torch.ones(T, Tk, device=q.device))
-                att = att.masked_fill(mask == 0, float('-inf'))
+                if T == 1:
+                    # if we are only processing one new token, we only need to apply the causal mask to the last query position
+                    att = att.masked_fill(self.bias[:,:,:T,:Tk] == 0, float('-inf'))
             else:
                 att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
@@ -340,7 +341,6 @@ class GPT(nn.Module):
         """
         time_list = []
         self.clear_cache()
-        self.current_pos = 0
         tokens_sent = 0
         for _ in range(max_new_tokens):
             # print('Input length right now: ', idx.size(1))
