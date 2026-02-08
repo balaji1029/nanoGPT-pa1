@@ -84,9 +84,9 @@ class CausalSelfAttention(nn.Module):
         # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
         # print(f'Size of x: {x.size()}')
         # print(f"q shape: {q.shape}, k shape: {k.shape}, v shape: {v.shape}")
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        k = k.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, Tk, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash and not cache_kv: 
@@ -365,7 +365,7 @@ class GPT(nn.Module):
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
             if cache:
                 print('cache is on')
-            idx_cond = idx_cond[:, sent_input_length:] if cache else idx_cond
+            idx_cond = idx_cond[:, sent_input_length] if cache else idx_cond
             sent_input_length += idx_cond.size(1)
             print(f"idx_cond shape: {idx_cond.shape}, sent_input_length: {sent_input_length}")
             print(f"{idx_cond[sent_input_length:, :].shape}")
