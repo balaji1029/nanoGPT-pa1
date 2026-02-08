@@ -81,7 +81,6 @@ class CausalSelfAttention(nn.Module):
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             # if not cached_kv:
             if cached_kv:
-                print(att.shape)
                 bias = torch.tril(torch.ones(1, 1, Tk, Tk)).to(att.device)
                 att = att.masked_fill(bias[:, :, -T:, -Tk] == 0, float('-inf'))
             else:
