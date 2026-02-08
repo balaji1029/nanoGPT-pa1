@@ -74,11 +74,11 @@ class CausalSelfAttention(nn.Module):
         Tk = k.size(1)
         q = q_new
 
-        print(q.size())
-        print(B, T, self.n_head, C // self.n_head)
+        # print(q.size())
+        # print(B, T, self.n_head, C // self.n_head)
 
-        print(k.size())
-        print(v.size())
+        # print(k.size())
+        # print(v.size())
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
@@ -206,7 +206,7 @@ class GPT(nn.Module):
     def forward(self, idx, targets=None, cache_kv=False):
         device = idx.device
         b, t = idx.size()
-        print(f"Forward called with idx of shape {idx.shape}")
+        # print(f"Forward called with idx of shape {idx.shape}")
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         # pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
@@ -359,16 +359,11 @@ class GPT(nn.Module):
         self.current_pos = 0
         sent_input_length = 0
         for _ in range(max_new_tokens):
-            print('Input length right now: ', idx.size(1))
             start_time = time.time()
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
-            if cache:
-                print('cache is on')
             idx_cond = idx_cond[:, sent_input_length:] if cache else idx_cond
             sent_input_length += idx_cond.size(1)
-            print(f"idx_cond shape: {idx_cond.shape}, sent_input_length: {sent_input_length}")
-            print(f"{idx_cond[sent_input_length:, :].shape}")
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond, cache_kv=cache)
             # pluck the logits at the final step and scale by desired temperature
