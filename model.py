@@ -330,6 +330,15 @@ class GPT(nn.Module):
         flops_promised = 312e12 # A100 GPU bfloat16 peak flops is 312 TFLOPS
         mfu = flops_achieved / flops_promised
         return mfu
+    
+    def pop_cache_by(self, num_tokens):
+        # pop the cache by a certain number of tokens, e.g. to make room for more tokens in the context window
+        for block in self.transformer.h:
+            if block.attn.cached_k is not None:
+                block.attn.cached_k = block.attn.cached_k[:, :num_tokens, :].contiguous()
+            if block.attn.cached_v is not None:
+                block.attn.cached_v = block.attn.cached_v[:, :num_tokens, :].contiguous()
+        self.current_pos -= num_tokens
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, cached_kv=False, greedy=False):
