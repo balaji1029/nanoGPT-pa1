@@ -82,7 +82,7 @@ class CausalSelfAttention(nn.Module):
             # if not cached_kv:
             if cached_kv:
                 att = att.masked_fill(self.bias[:, :, -T:, -Tk:] == 0, float('-inf'))
-                print(self.bias[:, :, -T:, -Tk:], att.shape)
+                # print(self.bias[:, :, -T:, -Tk:], att.shape)
             else:
                 att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
