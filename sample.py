@@ -86,6 +86,7 @@ time_taken_cached = []
 time_taken = []
 # run generation
 different_input_tokens = [
+    "His phone had died, the station clocks were frozen at 11:59, and the usual crowd noise had thinned into an uneasy silence.",
     "How to propose to a girl you like"
     "Hello, how are you?",
     "What is the capital of France?",
