@@ -107,6 +107,8 @@ with torch.no_grad():
                 num_tokens = list(range(len(x[0]), len(y[0])))
                 tokens_len += num_tokens[1:]
                 time_taken_cached += time_list[1:]
+                torch.manual_seed(seed)
+                torch.cuda.manual_seed(seed)
                 y, time_list = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k, cached_kv=False, greedy=greedy)
                 time_taken += time_list[1:]
                 print(decode(y[0].tolist()))
