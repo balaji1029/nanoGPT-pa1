@@ -48,11 +48,11 @@ class CausalSelfAttention(nn.Module):
 
         # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
         self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
-        if not self.flash:
-            print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
-            # causal mask to ensure that attention is only applied to the left in the input sequence
-            self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                        .view(1, 1, config.block_size, config.block_size))
+        # if not self.flash:
+        print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
+        # causal mask to ensure that attention is only applied to the left in the input sequence
+        self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
+                                    .view(1, 1, config.block_size, config.block_size))
 
     def forward(self, x, cached_kv=False):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
@@ -81,8 +81,7 @@ class CausalSelfAttention(nn.Module):
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             # if not cached_kv:
             if cached_kv:
-                bias = torch.tril(torch.ones(1, 1, Tk, Tk)).to(att.device)
-                att = att.masked_fill(bias[:, :, -T:, -Tk:] == 0, float('-inf'))
+                att = att.masked_fill(self.bias[:, :, -T:, -Tk:] == 0, float('-inf'))
             else:
                 att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
