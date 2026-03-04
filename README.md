@@ -1,6 +1,8 @@
 
 # nanoGPT
 
+The Kaggle Notebook can be found [here](https://www.kaggle.com/code/balajikaredla/nanogpt-kv-caching)
+
 ![nanoGPT](assets/nanogpt.jpg)
 
 
